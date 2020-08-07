@@ -38,7 +38,7 @@ endif
 " Install Vim-Plug
 "
 if (empty(glob('~/.vim/autoload/plug.vim')))
-  silent! curl -f -L -s -o ~/.vim/autoload/plug.vim --create-dirs
+  silent !curl -f -L -o ~/.vim/autoload/plug.vim --create-dirs
     \ 'https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
   if (has('autocmd'))
     autocmd rc VimEnter * PlugInstall --sync | source $MYVIMRC
@@ -52,8 +52,10 @@ call plug#begin(join(split(&runtimepath, ',')[:0] + ['plug'], '/'))
 " NOTE: use single quotes around plugin names
 "
 Plug 'jlanzarotta/bufexplorer'
+Plug 'ctrlpvim/ctrlp.vim'
 Plug 'junegunn/fzf.vim'
 Plug 'junegunn/goyo.vim'
+Plug 'davidhalter/jedi-vim'
 Plug 'junegunn/limelight.vim'
 Plug 'scrooloose/nerdtree'
 Plug 'Xuyuanp/nerdtree-git-plugin'
@@ -76,20 +78,23 @@ Plug 'rodjek/vim-puppet'
 Plug 'tpope/vim-repeat'
 Plug 'mhinz/vim-startify'
 Plug 'tpope/vim-surround'
-Plug 'ctrlpvim/ctrlp.vim'
 if has('nvim')
+  Plug 'Shougo/denite.nvim', { 'do': ':UpdateRemotePlugins' }
   Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
 else
   Plug 'Shougo/vimproc.vim', {'do' : 'make'}
   Plug 'roxma/nvim-yarp'
   Plug 'roxma/vim-hug-neovim-rpc'
+  Plug 'Shougo/denite.nvim'
   Plug 'Shougo/deoplete.nvim'
 endif
+Plug 'deoplete-plugins/deoplete-jedi'
 Plug 'ycm-core/YouCompleteMe'
 
-let g:deoplete#enable_at_startup = 0
-
 call plug#end()
+
+let g:deoplete#enable_at_startup = 1
+let g:jedi#completions_enabled = 0
 
 
 " Spacing
@@ -757,18 +762,16 @@ let g:airline#extensions#tabline#fnamecollapse = 1
 "
 " Choose some airline themes
 let g:airline_themes = [
-  \   'night_owl',
-  \   'base16color',
-  \   'owo',
-  \   'base16_ashes',
   \   'biogoo',
   \   'atomic',
   \   'tomorrow',
+  \   'base16_eighties',
+  \   'base16_snazzy',
+  \   'base16color',
   \   'behelit',
   \   'kolor',
   \   'night_owl',
-  \   'base16_eighties',
-  \   'base16_snazzy',
+  \   'owo',
   \ ]
 
 " Set an airline theme

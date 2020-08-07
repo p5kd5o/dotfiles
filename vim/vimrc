@@ -38,7 +38,7 @@ endif
 " Install Vim-Plug
 "
 if (empty(glob('~/.vim/autoload/plug.vim')))
-  silent !curl -f -L -o ~/.vim/autoload/plug.vim --create-dirs
+  silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs
     \ 'https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
   if (has('autocmd'))
     autocmd rc VimEnter * PlugInstall --sync | source $MYVIMRC
@@ -56,7 +56,7 @@ Plug 'ctrlpvim/ctrlp.vim'
 Plug 'junegunn/fzf.vim'
 Plug 'junegunn/goyo.vim'
 Plug 'davidhalter/jedi-vim'
-Plug 'junegunn/limelight.vim'
+Plug 'Valloric/ListToggle'
 Plug 'scrooloose/nerdtree'
 Plug 'Xuyuanp/nerdtree-git-plugin'
 Plug 'edkolev/promptline.vim'
@@ -64,7 +64,6 @@ Plug 'rust-lang/rust.vim'
 Plug 'vim-syntastic/syntastic'
 Plug 'majutsushi/tagbar'
 Plug 'edkolev/tmuxline.vim'
-Plug 'rainglow/vim', {'dir': plug_home . '/rainglow.vim'}
 Plug 'danilo-augusto/vim-afterglow'
 Plug 'vim-airline/vim-airline'
 Plug 'vim-airline/vim-airline-themes'
@@ -72,29 +71,36 @@ Plug 'flazz/vim-colorschemes'
 Plug 'ryanoasis/vim-devicons'
 Plug 'tpope/vim-fugitive'
 Plug 'airblade/vim-gitgutter'
+Plug 'fatih/vim-go'
 Plug 'pangloss/vim-javascript'
+"Plug 'prabirshrestha/vim-lsp'
+"Plug 'mattn/vim-lsp-settings'
 Plug 'tiagofumo/vim-nerdtree-syntax-highlight'
 Plug 'rodjek/vim-puppet'
 Plug 'tpope/vim-repeat'
 Plug 'mhinz/vim-startify'
 Plug 'tpope/vim-surround'
+"Plug 'ycm-core/YouCompleteMe'
 if has('nvim')
   Plug 'Shougo/denite.nvim', { 'do': ':UpdateRemotePlugins' }
   Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
+  Plug 'deoplete-plugins/deoplete-jedi', { 'do': ':UpdateRemotePlugins' }
 else
-  Plug 'Shougo/vimproc.vim', {'do' : 'make'}
   Plug 'roxma/nvim-yarp'
   Plug 'roxma/vim-hug-neovim-rpc'
+  Plug 'Shougo/vimproc.vim', {'do' : 'make'}
   Plug 'Shougo/denite.nvim'
   Plug 'Shougo/deoplete.nvim'
+  Plug 'deoplete-plugins/deoplete-jedi'
 endif
-Plug 'deoplete-plugins/deoplete-jedi'
-Plug 'ycm-core/YouCompleteMe'
-
-call plug#end()
-
+"
 let g:deoplete#enable_at_startup = 1
+let g:jedi#auto_initialization = 1
 let g:jedi#completions_enabled = 0
+let g:jedi#show_call_signatures = 0
+let g:jedi#smart_auto_mappings = 1
+"
+call plug#end()
 
 
 " Spacing
@@ -142,6 +148,9 @@ set showcmd
 " Briefly jump to match upon completing pair in 'matchpairs'
 set showmatch
 "
+" Silence messages about searches wrapping across a file
+set terse
+"
 " Update terminal titles
 set title
 "
@@ -152,7 +161,7 @@ set conceallevel=3
 set laststatus=2
 "
 " Define terminal titles
-let &titlestring = "%t%( [%M%R]%)%( (%{expand(\"%:p:~:h\")})%)%<"
+"let &titlestring = "%t%( [%M%R]%)%( (%{expand(\"%:p:~:h\")})%)%<"
 
 
 " Cursor
@@ -167,7 +176,7 @@ set backspace+=eol
 set backspace+=start
 "
 " Highlight current line number
-if (!has('nvim'))
+if (exists('&cursorlineopt'))
   set cursorline
   set cursorlineopt=number
 endif
@@ -212,24 +221,6 @@ set nrformats+=bin
 set nrformats+=hex
 
 
-" Line Wrapping
-"
-" Do not wrap lines
-"set nowrap
-"
-" Break lines before window edge
-"set linebreak
-"
-" Indent wrapped lines
-"set breakindent
-"
-" Break lines at these characters
-"let &breakat = " \t;:"
-"
-" Prefix wrapped lines
-"let &showbreak = "> "
-
-
 " Buffers and Windows
 "
 " Split windows off toward the right
@@ -249,28 +240,34 @@ if (exists('&winblend'))
   set winblend=10
 endif
 "
-"" Use a popup window for previews
-"if (exists('&previewpopup'))
-"  set previewpopup=
-"  set previewpopup+=highlight:Pmenu
-"endif
-
-
-" Key Timeout
-"
-" Timeout on mappings
-set timeout
-"
-" Don't timeout on keycodes
-if (has('nvim'))
-  set nottimeout
+" Enable pseudo-transparency for floating windows
+if (exists('&pumblend'))
+  set pumblend=10
 endif
 "
-" milliseconds to wait for completion of a mapping
-set timeoutlen=750
+" Use a popup window for previews
+if (exists('&previewpopup'))
+  set previewpopup=
+  set previewpopup+=highlight:PmenuSel
+endif
+
+
+" Line Wrapping
 "
-" milliseconds to wait for completion of a key code
-set ttimeoutlen=50
+" Do not wrap lines
+"set nowrap
+"
+" Break lines before window edge
+"set linebreak
+"
+" Indent wrapped lines
+"set breakindent
+"
+" Break lines at these characters
+"let &breakat = " \t;:"
+"
+" Prefix wrapped lines
+"let &showbreak = "> "
 
 
 " History
@@ -291,52 +288,74 @@ set updatecount=80
 set updatetime=100
 
 
-" Completion
+" Key Timeout
 "
+" milliseconds to wait for completion of a mapping
+set timeoutlen=750
+"
+" milliseconds to wait for completion of a key code
+set ttimeoutlen=50
+"
+" Timeout on mappings
+set timeout
+"
+" Don't timeout on keycodes
+if (has('nvim'))
+  set nottimeout
+endif
+
+
+" Completion and Tags
+"
+" Enable insert-mode completion types
 set complete=
 set complete+=.
 set complete+=w
 set complete+=b
 set complete+=u
-set complete+=d
 set complete+=t
+set complete+=i
 "
+" Configure insert-mode completion
 set completeopt=
 set completeopt+=menuone
 set completeopt+=longest
 set completeopt+=noinsert
 set completeopt+=preview
 "
-" Configure completion popup
+" Enable completion popup window
 if (has("quickfix") && has("textprop") && exists("&completepopup"))
   set completeopt+=popup
   set completepopup=
 " set completepopup+=height:15
-" set completepopup+=highlight
+  set completepopup+=highlight:PmenuSel
   set completepopup+=border:off
 endif
 "
-" Tag files
-set tags=
-set tags+=./tags
-set tags+=./.tags
-set tags+=tags
-set tags+=.tags
-"
-" Enable command completion
+" Enable command-mode completion
 set wildmenu
 "
-" Ignore case for filename completion
+" Ignore version control directories
+set wildignore+=*/.git/*,*/.hg/*,*/.svn/*
+"
+" Ignore filename case
 set wildignorecase
 "
-" Configure command-mode completion behavior
+" Configure command-mode completion
 set wildmode=
 set wildmode+=longest:full
 set wildmode+=full
 "
+" Check for tags in the following files
+set tags=
+set tags+=tags
+set tags+=.tags
+set tags+=./tags
+set tags+=./.tags
+"
 " Use arrow keys to move the cursor rather than select completions
-cnoremap <Left>  <C-]><Left>
-cnoremap <Right> <C-]><Right>
+cnoremap <Left>  <Space><BS><Left>
+cnoremap <Right> <Space><BS><Right>
 "
 " Set omnifunc fallback
 if (has("autocmd") && exists("+omnifunc"))
@@ -402,7 +421,7 @@ endif
 " Grep
 "
 " Use ripgrep instead
-if executable('rg') == 1
+if (executable('rg') == 1)
   let &grepprg = 'rg --color=auto --no-heading --no-column -- $* -'
 endif
 
@@ -428,31 +447,17 @@ endif
 "
 " Link colorcolumn highlighting to that of the current line number
 "if has('autocmd')
-"  autocmd rc ColorScheme * silent! highlight! link ColorColumn CursorLineNr
+"  autocmd rc ColorScheme *
+"    \ silent! highlight! link ColorColumn CursorLineNr
 "endif
 "
-" Define a function to apply 'colorcolumn' to all columns past 'texwidth'
-function UpdateColorColumn()
-  if (&textwidth)
-    if (&number || &relativenumber)
-      let l:columns = winwidth(0) - &textwidth - &numberwidth
-    else
-      let l:columns = winwidth(0) - &textwidth
-    endif
-    if (l:columns > 0)
-      let &colorcolumn = join(map(range(1, l:columns), '"+" . v:val'), ',')
-    else
-      let &colorcolumn = ''
-    endif
-  endif
-endfunction
+" Define a function to apply 'colorcolumn' to all columns past 'textwidth'
+let &colorcolumn = join(map(range(1, winwidth(0)), '"+" . v:val'), ',')
 "
-" Update 'colorcolumn' upon entering or modifying window
+" Update 'colorcolumn' upon resizing a window
 if (has('autocmd'))
-  autocmd rc BufEnter,FocusGained,WinEnter,VimEnter,VimResized *
-    \ silent! call UpdateColorColumn()
-  autocmd rc OptionSet number,numberwidth,relativenumber,textwidth
-    \ silent! call UpdateColorColumn()
+  autocmd rc BufEnter,VimEnter,VimResized,WinEnter *
+    \ silent! let &colorcolumn = join(map(range(1, winwidth(0)), '"+" . v:val'), ',')
 endif
 
 
@@ -464,6 +469,7 @@ if ($COLORTERM =~? '^\s*truecolor\s*$')
     let &t_8f = "\<Esc>[38;2;%lu;%lu;%lum"
     let &t_8b = "\<Esc>[48;2;%lu;%lu;%lum"
   endif
+  "let &t_Co = 256
   "let &t_Co = 16777216
 endif
 "
@@ -498,24 +504,15 @@ endif
 if (&termguicolors)
   let g:colorschemes = [
     \   'kolor',
-    \   'afterglow',
-    \   'janah',
     \   'colorsbox-steighties',
-    \   'skittles_berry',
     \   'dracula',
-    \   'desertink',
-    \   'Tomorrow-Night-Eighties',
-    \   '1989',
-    \   'evolution',
-    \   'kiss',
-    \   'vice',
-    \   'joker',
-    \   'joker-contrast',
-    \   'grunge',
-    \   'grunge-contrast',
-    \   'violaceous',
-    \   'violaceous-contrast',
     \   'neonwave',
+    \   'janah',
+    \   'evolution',
+    \   'joker-contrast',
+    \   'grunge-contrast',
+    \   'violaceous-contrast',
+    \   '1989',
     \ ]
 elseif (&t_Co >= 88)
   let g:colorschemes = [
@@ -529,13 +526,13 @@ elseif (&t_Co >= 88)
     \   'dracula',
     \   'evolution',
     \   'lucius',
-    \   'base16-synth-midnight-dark'
+    \   'base16-synth-midnight-dark',
     \ ]
 else
   let g:colorschemes = [
     \   'evening',
     \   'desert',
-    \   'default'
+    \   'default',
     \ ]
 endif
 "
@@ -564,13 +561,13 @@ function RotateColorscheme(n)
   endif
 endfunction
 "
-" F9:
-" Rotate to previous colorscheme
-nnoremap <silent> <F9> :call RotateColorscheme(-1)<CR>
-"
 " F10:
+" Rotate to previous colorscheme
+nnoremap <silent> <F10> :call RotateColorscheme(-1)<CR>
+"
+" F11:
 " Rotate to next colorscheme
-nnoremap <silent> <F10> :call RotateColorscheme(1)<CR>
+nnoremap <silent> <F11> :call RotateColorscheme(1)<CR>
 
 
 " C and C++
@@ -645,7 +642,7 @@ if (has('autocmd'))
 endif
 
 
-" python
+" Python
 "
 " Set local options for python scripts
 if (has('autocmd'))
@@ -719,41 +716,20 @@ if (!exists('g:airline_symbols'))
   let g:airline_symbols = {}
 endif
 "
-let g:airline_symbols.branch      = "\u00a0\u00a0"
-"let g:airline_symbols.branch     = "\u00a0\u00a0"
-let g:airline_symbols.crypt       = "\u00a0\u00a0"
-"let g:airline_symbols.crypt      = ''
-let g:airline_symbols.dirty       = "\u00a0\u00a0"
-"let g:airline_symbols.dirty      = ''
-"let g:airline_symbols.dirty      = ''
-"let g:airline_symbols.dirty      = ''
-let g:airline_symbols.ellipsis    = ''
-let g:airline_symbols.linenr      = "\u00a0"
-"let g:airline_symbols.linenr     = ''
-let g:airline_symbols.maxlinenr   = "\u00a0\u00a0"
-"let g:airline_symbols.maxlinenr  = ''
-"let g:airline_symbols.maxlinenr  = ''
-"let g:airline_symbols.maxlinenr  = 'ﬠ'
-let g:airline_symbols.notexists   = "\u00a0\u00a0"
-"let g:airline_symbols.notexists  = "\u00a0ﮊ"
-"let g:airline_symbols.notexists  = 'Ɇ'
-"let g:airline_symbols.notexists  = ''
-let g:airline_symbols.modified    = "\u00a0\u00a0"
-"let g:airline_symbols.modified   = "\u00a0\u00a0"
-let g:airline_symbols.paste       = "\u00a0\u00a0"
-let g:airline_symbols.readonly    = "\u00a0\u00a0"
-"let g:airline_symbols.readonly   = ''
-"let g:airline_symbols.readonly   = 'ﰸ'
-let g:airline_symbols.space       = "\u00a0"
-let g:airline_symbols.whitespace  = ''
-"let g:airline_symbols.whitespace = ''
-"let g:airline_symbols.whitespace = ''
-"let g:airline_symbols.whitespace = ''
-"let g:airline_symbols.whitespace = ''
-"
-"                            痢 凌             
-"        ﳠ ﲖ 﫿ﬀ                           ﮊ
-"
+let g:airline_symbols.branch      = "  "
+let g:airline_symbols.crypt       = "  "
+let g:airline_symbols.dirty       = "  "
+let g:airline_symbols.ellipsis    = '  '
+let g:airline_symbols.linenr      = " ﬌ "
+let g:airline_symbols.maxlinenr   = "  "
+let g:airline_symbols.notexists   = "  "
+let g:airline_symbols.modified    = "  "
+"let g:airline_symbols.modified   = "  "
+let g:airline_symbols.paste       = "  "
+let g:airline_symbols.readonly    = "  "
+let g:airline_symbols.space       = " "
+let g:airline_symbols.whitespace  = ""
+
 let g:airline#extensions#tabline#enabled = 1
 let g:airline#extensions#tabline#formatter = "unique_tail_improved"
 let g:airline#extensions#tabline#overflow_marker = '…'
@@ -762,16 +738,13 @@ let g:airline#extensions#tabline#fnamecollapse = 1
 "
 " Choose some airline themes
 let g:airline_themes = [
-  \   'biogoo',
   \   'atomic',
+  \   'biogoo',
   \   'tomorrow',
+  \   'base16color',
+  \   'base16_ashes',
   \   'base16_eighties',
   \   'base16_snazzy',
-  \   'base16color',
-  \   'behelit',
-  \   'kolor',
-  \   'night_owl',
-  \   'owo',
   \ ]
 
 " Set an airline theme
@@ -799,13 +772,13 @@ function RotateAirlineTheme(n)
   endif
 endfunction
 "
-" Alt F9:
-" Rotate to the previous airline theme
-nnoremap <silent> <Esc><F9> :call RotateAirlineTheme(-1)<CR>
-"
 " Alt F10:
+" Rotate to the previous airline theme
+nnoremap <silent> <Esc><F10> :call RotateAirlineTheme(-1)<CR>
+"
+" Alt F11:
 " Rotate to the next airline theme
-nnoremap <silent> <Esc><F10> :call RotateAirlineTheme(1)<CR>
+nnoremap <silent> <Esc><F11> :call RotateAirlineTheme(1)<CR>
 "
 " Refresh airline when the colorscheme changes
 if (has('autocmd'))
@@ -814,11 +787,25 @@ if (has('autocmd'))
 endif
 
 
+" BufExplorer
+"
+let g:bufExplorerDefaultHelp = 0
+let g:bufExplorerOnlyOneTab = 0
+let g:bufExplorerShowNoName = 1
+let g:bufExplorerShowTabBuffer = 1
+let g:bufExplorerShowUnlisted = 1
+"
+" Alt F12: Toggle the buffer explorer
+nnoremap <silent> <Esc><F12> :ToggleBufExplorer<CR>
+
+
 " CtrlP
 "
 let g:ctrlp_map = '<C-p>'
-let g:ctrlp_switch_buffer = 'Et'
 let g:ctrlp_cmd = 'FZF'
+let g:ctrlp_switch_buffer = 'Et'
+let g:ctrlp_show_hidden = 0
+let g:ctrlp_mruf_exclude = '^\(.*/\)\?\.\?tmp\(/.*\)\?$'
 
 
 " DevIcons
@@ -832,7 +819,7 @@ let g:webdevicons_enable_startify = 1
 let g:webdevicons_conceal_nerdtree_brackets = 1
 let g:DevIconsEnableFoldersOpenClose = 1
 let g:DevIconsEnableNERDTreeRedraw = 1
-"let g:DevIconsAppendArtifactFix = 1
+let g:DevIconsAppendArtifactFix = 1
 let g:WebDevIconsNerdTreeGitPluginForceVAlign = 1
 let g:WebDevIconsUnicodeDecorateFileNodes = 1
 let g:WebDevIconsUnicodeDecorateFolderNodes = 1
@@ -850,9 +837,8 @@ endif
 " Set sign colors automatically
 let g:gitgutter_set_sign_backgrounds = 1
 "
-" F5:
-" Toggle GitGutter
-nnoremap <silent> <F5> :GitGutterBufferToggle<CR>
+" F8: Toggle GitGutter
+nnoremap <silent> <F8> :GitGutterBufferToggle<CR>
 "
 " Bring colorscheme harmony
 highlight! link SignColumn LineNr
@@ -860,52 +846,40 @@ if (has('autocmd'))
   autocmd rc ColorScheme *
     \ highlight! link SignColumn LineNr
 endif
+
+
+" Goyo (zen mode)
 "
-"highlight! GitGutterAdd
-"highlight! GitGutterChange
-"highlight! GitGutterDelete
-"highlight! GitGutterAddLineNr           " default: links to CursorLineNr
-"highlight! GitGutterChangeLineNr        " default: links to CursorLineNr
-"highlight! GitGutterDeleteLineNr        " default: links to CursorLineNr
-"highlight! GitGutterChangeDeleteLineNr  " default: links to CursorLineNr
+" Set sign colors automatically
+let g:goyo_line_nr = 1
+let g:goyo_height = '92%'
+let g:goyo_width = 79
+
+" F9: Enter zen mode
+nnoremap <silent> <F9> :Goyo<CR>
+
+
+" ListToggle
+"
+" Toggle the location list
+let g:lt_location_list_toggle_map = '<leader>l'
+let g:lt_quickfix_list_toggle_map = '<leader>q'
 
 
 " NERDTree
 "
 let g:NERDTreeIndicatorMapCustom = {
-  \ 'Clean'     : '',
-  \ 'Deleted'   : '',
-  \ 'Dirty'     : '',
-  \ 'Ignored'   : 'ﰸ',
-  \ 'Modified'  : '',
-  \ 'Renamed'   : '',
-  \ 'Staged'    : '',
-  \ 'Unknown'   : '',
-  \ 'Unmerged'  : '',
-  \ 'Untracked' : '',
+  \   'Clean'     : '',
+  \   'Deleted'   : '',
+  \   'Dirty'     : '',
+  \   'Ignored'   : 'ﰸ',
+  \   'Modified'  : '',
+  \   'Renamed'   : '',
+  \   'Staged'    : '',
+  \   'Unknown'   : '',
+  \   'Unmerged'  : '',
+  \   'Untracked' : '',
   \ }
-" \ 'Clean'     : '',
-" \ 'Clean'     : '',
-" \ 'Deleted'   : '',
-" \ 'Deleted'   : '',
-" \ 'Deleted'   : 'ﮊ',
-" \ 'Deleted'   : '',
-" \ 'Dirty'     : '',
-" \ 'Dirty'     : '',
-" \ 'Dirty'     : '',
-" \ 'Ignored'   : 'ﰸ',
-" \ 'Ignored'   : '',
-" \ 'Ignored'   : '',
-" \ 'Modified'  : '',
-" \ 'Renamed'   : '',
-" \ 'Renamed'   : '',
-" \ 'Renamed'   : '',
-" \ 'Staged'    : '',
-" \ 'Staged'    : '',
-" \ 'Staged'    : '',
-" \ 'Unknown'   : '',
-" \ 'Unmerged'  : '',
-" \ 'Unmerged'  : '',
 "
 " Disable arrow icons at the left side of folder icons
 let g:NERDTreeDirArrowExpandable  = ""
@@ -930,14 +904,21 @@ let g:startify_update_oldfiles = 1
 " Syntastic
 "
 let g:syntastic_always_populate_loc_list = 1
-let g:syntastic_auto_loc_list = 1
-let g:syntastic_check_on_open = 0
+let g:syntastic_auto_loc_list = 0
+let g:syntastic_check_on_open = 1
 let g:syntastic_check_on_wq = 0
-let g:syntastic_mode_map = {
-  \ "mode": "active",
-  \ "active_filetypes": [],
-  \ "passive_filetypes": ["python"]
-  \ }
+let g:syntastic_check_on_w = 1
+"let g:syntastic_mode_map = {
+"  \   "mode": "active",
+"  \   "active_filetypes": [],
+"  \   "passive_filetypes": ["python"]
+"  \ }
+
+
+" Tagbar
+"
+" F12: Toggle the tagbar
+nnoremap <silent> <F12> :TagbarToggle<CR>
 
 
 " YouCompleteMe
@@ -953,43 +934,31 @@ let g:ycm_autoclose_preview_window_after_completion = 0
 let g:ycm_autoclose_preview_window_after_insertion = 0
 let g:ycm_collect_identifiers_from_tags_files = 1
 let g:ycm_complete_in_comments = 1
-let g:ycm_filetype_specific_completion_to_disable = {'gitcommit': 1}
-let g:ycm_global_ycm_extra_conf = join(
-  \ [split(&runtimepath, ',')[0], 'autoload/ycm_extra_conf.py'], '/')
+let g:ycm_confirm_extra_conf = 0
 let g:ycm_key_invoke_completion = '<C-Space>'
 let g:ycm_key_list_previous_completion = ['<S-Tab>', '<Up>']
 let g:ycm_key_list_select_completion = ['<Tab>', '<Down>']
-let g:ycm_key_list_stop_completion = ['<C-s>', '<Enter>']
-let g:ycm_max_num_candidates = 35
-let g:ycm_max_num_identifier_candidates = 7
-let g:ycm_min_num_identifier_candidate_chars = 3
-let g:ycm_min_num_of_chars_for_completion = 2
-let g:ycm_seed_identifiers_with_syntax = 1
+let g:ycm_key_list_stop_completion = ['<C-y>', '<Enter>']
+let g:ycm_max_num_candidates = 48
+let g:ycm_max_num_identifier_candidates = 12
+let g:ycm_min_num_of_chars_for_completion = 3
+let g:ycm_seed_identifiers_with_syntax = 0
+let g:ycm_global_ycm_extra_conf =
+  \ split(&runtimepath, ',')[0] . '/autoload/ycm_extra_conf.py'
 "
 " Toggle preview window
 nmap <silent> <leader><leader> <plug>(YCMHover)
 "
 if (has('autocmd'))
-  autocmd rc FileType *
+  autocmd rc FileType c,cpp
     \ let b:ycm_hover = {
     \   'command': 'GetDoc',
-    \   'syntax': &syntax
+    \   'syntax': &filetype,
     \ }
 endif
 
+
 " FZF
-"
-let g:fzf_command_prefix = ''
-let g:fzf_commands_expect = 'alt-enter'
-let g:fzf_buffers_jump = 1
-let g:fzf_tags_command = 'ctags -f .tags -R'
-"
-" Set fzf window layout
-if ($TMUX != '' && $FZF_TMUX != '')
-  let g:fzf_layout =  {'tmux':  $FZF_TMUX_HEIGHT ? '-d' . $FZF_TMUX_HEIGHT : '-d38%'}
-else
-  let g:fzf_layout =  {'window': 'belowright 35new'}
-endif
 "
 " Bring colorscheme harmony
 let g:fzf_colors = {
@@ -1008,13 +977,24 @@ let g:fzf_colors = {
   \ 'header':   ['fg', 'Comment'],
   \ }
 "
+" Set fzf window layout
+if ($TMUX != '' && $FZF_TMUX != '')
+  let g:fzf_layout =  {'tmux':  $FZF_TMUX_HEIGHT ? '-d' . $FZF_TMUX_HEIGHT : '-d38%'}
+else
+  let g:fzf_layout =  {'window': 'belowright 34new'}
+endif
+"
+let g:fzf_command_prefix = ''
+let g:fzf_commands_expect = 'alt-enter'
+let g:fzf_buffers_jump = 1
+let g:fzf_tags_command = 'ctags -f .tags -R'
+"
 " Browse colorschemes
 function! Colors(query, fullscreen)
   call fzf#run(fzf#wrap({
     \ 'options': [
     \   '--cycle',
     \   '--bind=tab:down,shift-tab:up',
-    \   '--border=sharp',
     \   '--info=hidden',
     \   '--layout=reverse',
     \   '--query', a:query,
@@ -1023,11 +1003,9 @@ function! Colors(query, fullscreen)
     \   split(globpath(&rtp, "colors/*.vim")), "fnamemodify(v:val, ':t:r')"
     \ ),
     \ 'sink': 'color',
-    \ 'window': join([
-    \   'vertical', 'aboveleft', '30new'
-    \ ])}))
+    \ 'window': join(['vertical', 'aboveleft', '30new'])
+    \ }))
 endfunction
-"
 command! -nargs=* -bang Colors
   \ call Colors(<q-args>, <bang>0)
 "
@@ -1036,21 +1014,28 @@ command! -bang -nargs=? -complete=dir Files
   \ call fzf#vim#files(
   \   <q-args>,
   \   fzf#vim#with_preview(fzf#wrap({
-  \   'options': [
-  \     '--bind=tab:down,shift-tab:up',
-  \     '--border=sharp',
-  \     '--info=inline'
-  \     '--layout=reverse',
+  \     'options': [
+  \       '--bind=tab:down,shift-tab:up',
+  \       '--info=inline',
+  \       '--layout=reverse',
   \   ]})),
-  \   <bang>0)
+  \   <bang>0
+  \ )
 "
 " F1:
 " Find helptags
-nnoremap <silent> <F1> :Helptags!<CR>
-"
-" F12:
-" Select a colorscheme
-nnoremap <silent> <F12> :Colors!<CR>
+nnoremap <silent> <F1> :Helptags<CR>
+inoremap <silent> <F1> <Esc>:Helptags<CR>
+
+" F2:
+" Find buffers
+nnoremap <silent> <F2> :Buffers<CR>
+inoremap <silent> <F2> <Esc>:Buffers<CR>
+
+" F3:
+" Find commands
+nnoremap <silent> <F3> :Commands<CR>
+inoremap <silent> <F3> <Esc>:Commands<CR>
 
 
 " Tabs
@@ -1068,7 +1053,7 @@ nnoremap <silent> <C-PageUp> :tabnext<CR>
 nnoremap <silent> <C-PageDown> :tabprev<CR>
 
 
-" Misc
+" Paste mode
 "
 set pastetoggle=<Insert>
 "
@@ -1076,21 +1061,22 @@ set pastetoggle=<Insert>
 " Toggle paste mode
 nnoremap <silent> <Insert>
   \ : set paste!<CR>
+
+
+" Misc
 "
-" F6:
-" Toggle line numbers
-nnoremap <silent> <F6>
+" F7: Toggle line numbers
+nnoremap <silent> <F7>
   \ : let &l:nu = !&l:nu<Bar>
   \   let &l:rnu = &l:nu<CR>
 "
-" F7:
-" Toggle search highlighting
-nnoremap <silent> <F7>
+" F6: Toggle search highlighting
+nnoremap <silent> <F6>
   \ : setlocal hlsearch!<CR>
 "
 " Insert a shebang above the first line
-nnoremap <silent> <leader>#!
-  \ ggI<C-R>=substitute(&ft, "..*", "#!" . exepath(&ft) . "\\r", "")<CR><Esc>``
+"nnoremap <silent> <leader>#!
+"  \ ggI<C-R>=substitute(&ft, "..*", "#!" . exepath(&ft) . "\\r", "")<CR><Esc>``
 "
 " Search forward for the current visual selection
 " Note: Jumping to a tag does not set the current search pattern
